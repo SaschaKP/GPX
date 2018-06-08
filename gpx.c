@@ -30,9 +30,9 @@
 #include <float.h>
 #include <math.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 #include <sys/types.h>
-#include <sys/uio.h>
+//#include <sys/uio.h>
 #include <unistd.h>
 
 #include "gpx.h"
@@ -4384,7 +4384,8 @@ int gpx_convert_line(Gpx *gpx, char *gcode_line)
                 
                 // M126 - Turn blower fan on (valve open)
             case 126: {
-                int state = (gpx->command.flag & S_IS_SET) ? ((unsigned)gpx->command.s ? 1 : 0) : 1;
+				int state = (gpx->command.flag & S_IS_SET) ? (100.0f * (float)gpx->command.s / 255.0f) : 1;
+                //int state = (gpx->command.flag & S_IS_SET) ? ((unsigned)gpx->command.s ? 1 : 0) : 1;
                 if(gpx->flag.dittoPrinting) {
                     CALL( set_valve(gpx, B, state) );
                     CALL( set_valve(gpx, A, state) );

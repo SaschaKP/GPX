@@ -1,6 +1,6 @@
 # Declaration of variables
 CC = cc
-CC_FLAGS = -w
+CC_FLAGS = -w 
 L_FLAGS = -lm
 
 # File names

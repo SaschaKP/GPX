@@ -28,12 +28,27 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
-#include <termios.h>
-#include <unistd.h>
+#include <string.h>
 
-#ifdef _WIN32
-#   include "getopt.h"
+#if !defined(_WIN32) && !defined(_WIN64)
+#include <unistd.h>
+#endif
+
+#if defined(SERIAL_SUPPORT)
+#include <termios.h>
+#else
+typedef long speed_t;
+#define B115200 115200
+#define B57600  57600
+#define NO_SERIAL_SUPPORT_MSG "Serial I/O and USB printing is not supported " \
+     "by this build of GPX"
+#endif
+
+#if defined(_WIN32) || defined(_WIN64)
+#include "getopt.h"
+    // strcasecmp() is not provided on Windows
+    // _stricmp() is equivalent but may require <string.h>
+#define strcasecmp _stricmp
 #endif
 
 #include "gpx.h"
@@ -73,6 +88,14 @@ static void exit_handler(void)
 
 static void usage()
 {
+#if defined(SERIAL_SUPPORT)
+#define SERIAL_MSG1 "s"
+#define SERIAL_MSG2 "[-b BAUDRATE] "
+#else
+#define SERIAL_MSG1 ""
+#define SERIAL_MSG2 ""
+#endif
+
     fputs("GPX " GPX_VERSION " Copyright (c) 2013 WHPThomas, All rights reserved." EOL, stderr);
     
     fputs(EOL "This program is free software; you can redistribute it and/or modify" EOL, stderr);
@@ -86,7 +109,7 @@ static void usage()
     fputs("GNU General Public License for more details." EOL, stderr);
     
     fputs(EOL "Usage:" EOL, stderr);
-    fputs("gpx [-dgilpqrstvw] [-b BAUDRATE] [-c CONFIG] [-e EEPROM] [-f DIAMETER] [-m MACHINE] [-n SCALE] [-x X] [-y Y] [-z Z] IN [OUT]" EOL, stderr);
+    fputs("gpx [-dgilpqr" SERIAL_MSG1 "tvw] " SERIAL_MSG2 "[-c CONFIG] [-e EEPROM] [-f DIAMETER] [-m MACHINE] [-n SCALE] [-x X] [-y Y] [-z Z] IN [OUT]" EOL, stderr);
     fputs(EOL "Options:" EOL, stderr);
     fputs("\t-d\tsimulated ditto printing" EOL, stderr);
     fputs("\t-g\tMakerbot/ReplicatorG GCODE flavor" EOL, stderr);
@@ -95,11 +118,15 @@ static void usage()
     fputs("\t-p\toverride build percentage" EOL, stderr);
     fputs("\t-q\tquiet mode" EOL, stderr);
     fputs("\t-r\tReprap GCODE flavor" EOL, stderr);
+#if defined(SERIAL_SUPPORT)
     fputs("\t-s\tenable USB serial I/O and send x3G output to 3D printer" EOL, stderr);
+#endif
     fputs("\t-t\ttruncate filename (DOS 8.3 format)" EOL, stderr);
     fputs("\t-v\tverose mode" EOL, stderr);
     fputs("\t-w\trewrite 5d extrusion values" EOL, stderr);
+#if defined(SERIAL_SUPPORT)
     fputs(EOL "BAUDRATE: the baudrate for serial I/O (default is 115200)" EOL, stderr);
+#endif
     fputs("CONFIG: the filename of a custom machine definition (ini file)" EOL, stderr);
     fputs("EEPROM: the filename of an eeprom settings definition (ini file)" EOL, stderr);
     fputs("DIAMETER: the actual filament diameter in the printer" EOL, stderr);
@@ -122,15 +149,32 @@ static void usage()
     fputs("\tY = the y axis offset" EOL, stderr);
     fputs("\tZ = the z axis offset" EOL, stderr);
     fputs(EOL "IN: the name of the sliced gcode input filename" EOL, stderr);
-    fputs("OUT: the name of the x3g output filename or the serial I/O port" EOL, stderr);
+    fputs("OUT: the name of the x3g output filename"
+#if defined(SERIAL_SUPPORT)
+		" or the serial I/O port"
+#endif
+		EOL, stderr);
     fputs(EOL "Examples:" EOL, stderr);
     fputs("\tgpx -p -m r2 my-sliced-model.gcode" EOL, stderr);
     fputs("\tgpx -c custom-tom.ini example.gcode /volumes/things/example.x3g" EOL, stderr);
     fputs("\tgpx -x 3 -y -3 offset-model.gcode" EOL, stderr);
+#if defined(SERIAL_SUPPORT)
     fputs("\tgpx -m c4 -s sio-example.gcode /dev/tty.usbmodem" EOL EOL, stderr);
-    
+#endif
     exit(1);
 }
+
+#if !defined(SERIAL_SUPPORT)
+
+// Should never be called in practice but code is less grotty (less #ifdef's)
+// if we simply provide this stub
+static void sio_open(const char *filename, speed_t baud_rate)
+{
+     perror(NO_SERIAL_SUPPORT_MSG);
+     exit(1);
+}
+
+#else
 
 static void sio_open(char *filename, speed_t baud_rate)
 {
@@ -199,6 +243,7 @@ static void sio_open(char *filename, speed_t baud_rate)
     if(gpx.flag.verboseMode) fprintf(gpx.log, "Communicating via: %s" EOL, filename);
 }
 
+#endif // Serial support
 
 // GPX program entry point
 
@@ -265,6 +310,10 @@ int main(int argc, char * argv[])
     while ((c = getopt(argc, argv, "b:c:de:gf:ilm:n:pqrstvwx:y:z:?")) != -1) {
         switch (c) {
             case 'b':
+#if !defined(SERIAL_SUPPORT)
+		fprintf(stderr, NO_SERIAL_SUPPORT_MSG EOL);
+		usage(1);
+#else
                 i = atoi(optarg);
                 switch(i) {
                     case 4800:
@@ -300,10 +349,16 @@ int main(int argc, char * argv[])
                         usage();
                 }
                 if(gpx.flag.verboseMode) fprintf(stderr, "Setting baud rate to: %i bps" EOL, i);
+#endif
                 // fall through
             case 's':
+#if !defined(SERIAL_SUPPORT)
+		 fprintf(stderr, NO_SERIAL_SUPPORT_MSG EOL);
+		usage(1);
+#else
                 serial_io = 1;
                 gpx.flag.framingEnabled = 1;
+#endif
                 break;
             case 'c':
                 config = optarg;
