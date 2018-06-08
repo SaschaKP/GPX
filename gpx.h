@@ -61,9 +61,9 @@ extern "C" {
     
 // BOUNDS CHECKING VARIABLES
     
-#define NOZZLE_MAX 280
+#define NOZZLE_MAX 380
 #define NOZZLE_TIME 0.6
-#define HBP_MAX 120
+#define HBP_MAX 160
 #define HBP_TIME 6
 #define AMBIENT_TEMP 24
 #define ACCELERATION_TIME 1.15
