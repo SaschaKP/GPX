@@ -148,6 +148,11 @@ static void usage()
 	fputs("\t3dimulti = 3Dison Multi" EOL, stderr);
 	fputs("\t3dipro = 3Dison Pro" EOL, stderr);
 	fputs("\t3dih700 = 3Dison H700" EOL, stderr);
+	fputs("\tcxy = Core-XY with HBP - single extruder" EOL, stderr);
+	fputs("\tcxysz = Core-XY with HBP - single extruder, slow Z" EOL, stderr);
+	fputs("\tzyyx = ZYYX - single extruder" EOL, stderr);
+	fputs("\tzyyxdual = ZYYX - dual extruder" EOL, stderr);
+	fputs("\tzyyxpro = ZYYX pro" EOL, stderr);
 	fputs(EOL "NEWSTEPSPERMM: new axis steps per mm in format: x??y??z??a??b??" EOL, stderr);
     fputs("You must first define a base profile with the -m flag." EOL, stderr);
     fputs("Replace ?? with value, for example: x100y100z30a96.5b98" EOL, stderr);

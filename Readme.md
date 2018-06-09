@@ -6,9 +6,13 @@ Cupcake, ThingOMatic, and Replicator 1/2/2x printers - with support for both sto
 sailfish firmwares. My hope is that is little utility will open up Makerbot 3D printers to
 a range of new and exciting sources and utilities for 3D printing input.
 
+This release and source in particular is focused to be used with simplify3D, a program distributed on https://www.simplify3d.com/
+
+The reason that got me on the modifications is to allow other users as well to remove certain software limits, and allow for the true makers, to adjust missing functionality.
+
 Usage:
 
-gpx [-dgiprsvw] [-b B] [-c C] [-f F] [-m M] [-x X] [-y Y] [-z Z] IN [OUT]
+gpx [-dgiprsuvw] [-b B] [-c C] [-f F] [-m M] [-x X] [-y Y] [-z Z] IN [OUT]
 
 Options:
 
@@ -17,11 +21,12 @@ Options:
 	-i	enable stdin and stdout support for command line pipes
 	-p	override build percentage
 	-r	Reprap GCODE flavor
-	-s	enable USB serial I/O and send x3G output to 3D printer
-	-v	verose mode
+	-s	enable USB serial I/O and send x3G output to 3D printer (only on non-windows systems)
+	-u  Custom Machine Settings
+	-v	verbose mode
 	-w	rewrite 5d extrusion values
 
-B is baudrate for serial I/O (default is 115200)
+B is baudrate for serial I/O (default is 115200 - only on non-windows systems)
 
 C is the filename of a custom machine definition (ini)
 
@@ -41,6 +46,15 @@ M is the predefined machine type:
 	r2  = Replicator 2 (default)
 	r2h = Replicator 2 with HBP
 	r2x = Replicator 2X
+	m180 = Maylan M180
+	3dimulti = 3Dison Multi
+	3dipro = 3Dison Pro
+	3dih700 = 3Dison H700
+	cxy = Core-XY with HBP - single extruder
+	cxysz = Core-XY with HBP - single extruder, slow z
+	zyyx = ZYYX 3D printer, single extruder
+	zyyxdual = ZYYX 3D printer, dual extruder
+	zyyxpro = ZYYX 3D printer, Pro Version
 
 X,Y & Z are the coordinate system offsets for the conversion:
 

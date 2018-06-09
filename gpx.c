@@ -257,6 +257,91 @@ static Machine threedison_pro = {
     14,
 };
 
+// Core-XY machine, 18 tooth GT2 timing pulleys for X and Y
+static Machine core_xy = {
+    {18000, 1000, 15, 2500, 200, 88.888889, ENDSTOP_IS_MAX}, // x axis
+    {18000, 1000, 15, 2500, 200, 88.888889, ENDSTOP_IS_MAX}, // y axis
+    {1170, 150, 10, 1100, 200, 400, ENDSTOP_IS_MIN},        // z axis
+    {1600, 2000, 20, 96.275201870333662468889989185642, 3200, 1}, // a extruder
+    {1600, 2000, 20, 96.275201870333662468889989185642, 3200, 1}, // b extruder
+    1.75, // nominal filament diameter
+    0.85, // nominal packing density
+    0.4, // nozzle diameter
+    {0, 0, 0}, // toolhead offsets
+    {0.0050, 0.0550},  // JKN
+    1,  // extruder count
+    20, // timeout
+    15
+};
+
+// Core-XY machine with a slow Z axis ("sz"), 18T GT2 pulleys for X and Y
+static Machine core_xysz = {
+    {18000, 1000, 15, 2500, 200, 88.888889, ENDSTOP_IS_MAX}, // x axis
+    {18000, 1000, 15, 2500, 200, 88.888889, ENDSTOP_IS_MAX}, // y axis
+    {600, 150, 10, 600, 200, 400, ENDSTOP_IS_MIN},        // z axis
+    {1600, 2000, 20, 96.275201870333662468889989185642, 3200, 1}, // a extruder
+    {1600, 2000, 20, 96.275201870333662468889989185642, 3200, 1}, // b extruder
+    1.75, // nominal filament diameter
+    0.85, // nominal packing density
+    0.4, // nozzle diameter
+    {0, 0, 0}, // toolhead offsets
+    {0.0050, 0.0550},  // JKN
+    1,  // extruder count
+    20, // timeout
+    16
+};
+
+// ZYYX 3D printer, single extruder, 18T GT2 pulleys for X and Y
+static Machine zyyx = {
+    {18000, 850, 12, 2500, 270, 88.888889, ENDSTOP_IS_MAX}, // x axis
+    {18000, 850, 12, 2500, 230, 88.888889, ENDSTOP_IS_MAX}, // y axis
+    {1170, 50, 12, 1100, 195, 400, ENDSTOP_IS_MIN},        // z axis
+    {5000, 5000, 100, 96.275201870333662468889989185642, 3200, 0}, // a extruder
+    {5000, 5000, 100, 96.275201870333662468889989185642, 3200, 0}, // b extruder
+    1.75, // nominal filament diameter
+    0.97, // nominal packing density
+    0.4, // nozzle diameter
+    {0, 0, 0}, // toolhead offsets
+    {0.0050, 0.0550},  // JKN
+    1,  // extruder count
+    20, // timeout
+    17
+};
+
+// ZYYX 3D printer, dual extruders, 18T GT2 pulleys for X and Y
+static Machine zyyx_dual = {
+    {18000, 850, 12, 2500, 270, 88.888889, ENDSTOP_IS_MAX}, // x axis
+    {18000, 850, 12, 2500, 230, 88.888889, ENDSTOP_IS_MAX}, // y axis
+    {1170, 50, 12, 1100, 195, 400, ENDSTOP_IS_MIN},        // z axis
+    {5000, 5000, 100, 96.275201870333662468889989185642, 3200, 0}, // a extruder
+    {5000, 5000, 100, 96.275201870333662468889989185642, 3200, 0}, // b extruder
+    1.75, // nominal filament diameter
+    0.97, // nominal packing density
+    0.4, // nozzle diameter
+    {33, 0, 0}, // toolhead offsets
+    {0.0050, 0.0550},  // JKN
+    2,  // extruder count
+    20, // timeout
+    18
+};
+
+// ZYYX 3D printer, single extruder, 18T GT2 pulleys for X and Y
+static Machine zyyx_pro = {
+    {18000, 850, 12, 2500, 270, 88.888889, ENDSTOP_IS_MAX}, // x axis
+    {18000, 850, 12, 2500, 230, 88.888889, ENDSTOP_IS_MAX}, // y axis
+    {1170, 50, 12, 1100, 195, 400, ENDSTOP_IS_MIN},        // z axis
+    {5000, 5000, 100, 96.275201870333662468889989185642, 3200, 1}, // a extruder
+    {5000, 5000, 100, 96.275201870333662468889989185642, 3200, 1}, // b extruder
+    1.75, // nominal filament diameter
+    0.97, // nominal packing density
+    0.4, // nozzle diameter
+    {0, 0, 0}, // toolhead offsets
+    {0.0050, 0.0550},  // JKN
+    1,  // extruder count
+    20, // timeout
+    19
+};
+
 #define MACHINE_IS(m) strcasecmp(machine, m) == 0
 
 int gpx_set_machine(Gpx *gpx, char *machine)
@@ -404,6 +489,66 @@ int gpx_set_machine(Gpx *gpx, char *machine)
 		else
 		{
 		  VERBOSE( fputs("Ignoring duplicate machine definition: -m 3dimulti / -m 3dih700" EOL, gpx->log) );
+		}
+	}
+	else if ( MACHINE_IS("cxy") )
+	{
+		if (gpx->machine.type != 15 )
+		{
+		  gpx->machine = core_xy;
+		  VERBOSE( fputs("Loading machine definition: Core-XY with HBP - single extruder" EOL, gpx->log) );
+		}
+		else
+		{
+		  VERBOSE( fputs("Ignoring duplicate machine definition: -m cxy" EOL, gpx->log) );
+		}
+	}
+	else if ( MACHINE_IS("cxysz") )
+	{
+		if (gpx->machine.type != 16 )
+		{
+		  gpx->machine = core_xysz;
+		  VERBOSE( fputs("Loading machine definition: Core-XY with HBP - single extruder, slow z" EOL, gpx->log) );
+		}
+		else
+		{
+		  VERBOSE( fputs("Ignoring duplicate machine definition: -m cxysz" EOL, gpx->log) );
+		}
+	}
+	else if ( MACHINE_IS("zyyx") )
+	{
+		if (gpx->machine.type != 17 )
+		{
+		  gpx->machine = zyyx;
+		  VERBOSE( fputs("Loading machine definition: ZYYX 3D printer, single extruder" EOL, gpx->log) );
+		}
+		else
+		{
+		  VERBOSE( fputs("Ignoring duplicate machine definition: -m zyyx" EOL, gpx->log) );
+		}
+	}
+	else if ( MACHINE_IS("zyyxdual") )
+	{
+		if (gpx->machine.type != 18 )
+		{
+		  gpx->machine = zyyx_dual;
+		  VERBOSE( fputs("Loading machine definition: ZYYX 3D printer, dual extruder" EOL, gpx->log) );
+		}
+		else
+		{
+		  VERBOSE( fputs("Ignoring duplicate machine definition: -m zyyxdual" EOL, gpx->log) );
+		}
+	}
+	else if ( MACHINE_IS("zyyxpro") )
+	{
+		if (gpx->machine.type != 19 )
+		{
+		  gpx->machine = zyyx_pro;
+		  VERBOSE( fputs("Loading machine definition: ZYYX 3D printer, Pro Version" EOL, gpx->log) );
+		}
+		else
+		{
+		  VERBOSE( fputs("Ignoring duplicate machine definition: -m zyyxpro" EOL, gpx->log) );
 		}
 	}
     else {
