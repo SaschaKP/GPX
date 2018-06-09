@@ -122,7 +122,8 @@ static void usage()
     fputs("\t-s\tenable USB serial I/O and send x3G output to 3D printer" EOL, stderr);
 #endif
     fputs("\t-t\ttruncate filename (DOS 8.3 format)" EOL, stderr);
-    fputs("\t-v\tverose mode" EOL, stderr);
+	fputs("\t-u\tCustom Machine Settings" EOL, stderr);
+    fputs("\t-v\tverbose mode" EOL, stderr);
     fputs("\t-w\trewrite 5d extrusion values" EOL, stderr);
 #if defined(SERIAL_SUPPORT)
     fputs(EOL "BAUDRATE: the baudrate for serial I/O (default is 115200)" EOL, stderr);
@@ -143,6 +144,11 @@ static void usage()
     fputs("\tr2  = Replicator 2 (default)" EOL, stderr);
     fputs("\tr2h = Replicator 2 with HBP" EOL, stderr);
     fputs("\tr2x = Replicator 2X" EOL, stderr);
+	fputs(EOL "NEWSTEPSPERMM: new axis steps per mm in format: x??y??z??a??b??" EOL, stderr);
+    fputs("You must first define a base profile with the -m flag." EOL, stderr);
+    fputs("Replace ?? with value, for example: x100y100z30a96.5b98" EOL, stderr);
+    fputs("Leaving an axis out will result in the ommited axis" EOL, stderr);
+    fputs("retaining base machine value" EOL, stderr);
     fputs(EOL "SCALE: the coordinate system scale for the conversion (ABS = 1.0035)" EOL, stderr);
     fputs("X,Y & Z: the coordinate system offsets for the conversion" EOL, stderr);
     fputs("\tX = the x axis offset" EOL, stderr);
@@ -307,7 +313,7 @@ int main(int argc, char * argv[])
     // READ COMMAND LINE
     
     // get the command line options
-    while ((c = getopt(argc, argv, "b:c:de:gf:ilm:n:pqrstvwx:y:z:?")) != -1) {
+    while ((c = getopt(argc, argv, "b:c:de:gf:ilm:n:pqrstuvwx:y:z:?")) != -1) {
         switch (c) {
             case 'b':
 #if !defined(SERIAL_SUPPORT)
@@ -405,6 +411,9 @@ int main(int argc, char * argv[])
                 break;
             case 't':
                 truncate_filename = 1;
+                break;
+            case 'u':
+                setCustomMachine(&gpx, optarg);
                 break;
             case 'v':
                 gpx.flag.verboseMode = 1;

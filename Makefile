@@ -1,6 +1,7 @@
 # Declaration of variables
-CC = cc
-CC_FLAGS = -w 
+# if you want to do statically linked binary, use -> make SHARED=0 CC='gcc -static'
+CC = gcc
+CC_FLAGS = -w
 L_FLAGS = -lm
 
 # File names

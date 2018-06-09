@@ -3189,6 +3189,90 @@ static int ini_parse_file(Gpx* gpx, FILE* file, int (*handler)(Gpx*, const char*
     return error;
 }
 
+char *nwstrchr(char* s, const char* c, size_t csize)
+{
+	for(int i = 0; i<csize; i++)
+		if(s[0] == c[i])
+			return s;
+    return 0;
+}
+
+void setCustomMachine(Gpx *gpx, char *args)
+{
+   if(!gpx)
+	   gpx_set_machine(gpx, "r1d");
+   int len=0;
+   const char axis[10] = "xXyYzZaAbB";
+   double restepped[6] = {-1.0,-1.0,-1.0,-1.0,-1.0,-1.0};
+   char token[40];
+   char *result = strpbrk(args, axis);
+   while(result != NULL)
+   {
+	   int pos=-1;
+	   for(int i=0; i<11; i++)
+	   {
+		   if(result[0]==axis[i])
+			   pos=(i-(i%2))/2;
+	   }
+	   if(pos>-1)
+	   {
+		   memset(&token[0], 0, sizeof(token));
+		   size_t len=strlen(result);
+		   int arrpos=0;
+		   for(int i=1; i<len && i<40; i++)
+		   {
+			   char *ret = nwstrchr(&result[i], axis, 10);
+			   if(ret)
+			   {
+				   result=ret;
+				   restepped[pos] = atof(&token[0]);
+				   break;
+			   }
+			   else
+			   {
+				   printf("[%i] = %c\n", i-1, result[i]);
+				   token[arrpos]=result[i];
+				   arrpos++;
+			   }
+			   if(arrpos+1 == len)//end of string
+			   {
+				   result=NULL;
+				   restepped[pos] = atof(&token[0]);
+				   break;
+			   }
+		   }
+	   }
+	   else
+		 break;//we should never get here...
+   }
+   for(int i=0; i<6; ++i)
+   {
+	   if(restepped[i]>0)
+	   {
+		   switch(i)
+		   {
+			   case 0:
+			   gpx->machine.x.steps_per_mm = restepped[i];
+			   break;
+			   case 1:
+			   gpx->machine.y.steps_per_mm = restepped[i];
+			   break;
+			   case 2:
+			   gpx->machine.z.steps_per_mm = restepped[i];
+			   break;
+			   case 3:
+			   gpx->machine.a.steps_per_mm = restepped[i];
+			   break;
+			   case 4:
+			   gpx->machine.b.steps_per_mm = restepped[i];
+			   break;
+			   default:
+			   break;
+		   }
+	   }
+   }
+}
+
 /* See documentation in header file. */
 
 static int ini_parse(Gpx* gpx, const char* filename,
