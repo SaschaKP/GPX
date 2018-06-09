@@ -144,6 +144,10 @@ static void usage()
     fputs("\tr2  = Replicator 2 (default)" EOL, stderr);
     fputs("\tr2h = Replicator 2 with HBP" EOL, stderr);
     fputs("\tr2x = Replicator 2X" EOL, stderr);
+	fputs("\tm180 = Maylan M180" EOL, stderr);
+	fputs("\t3dimulti = 3Dison Multi" EOL, stderr);
+	fputs("\t3dipro = 3Dison Pro" EOL, stderr);
+	fputs("\t3dih700 = 3Dison H700" EOL, stderr);
 	fputs(EOL "NEWSTEPSPERMM: new axis steps per mm in format: x??y??z??a??b??" EOL, stderr);
     fputs("You must first define a base profile with the -m flag." EOL, stderr);
     fputs("Replace ?? with value, for example: x100y100z30a96.5b98" EOL, stderr);

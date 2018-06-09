@@ -212,6 +212,51 @@ static Machine replicator_2X = {
     11,
 };
 
+//  Axis - max_feedrate, home_feedrate, steps_per_mm, endstop;
+//  Extruder - max_feedrate, steps_per_mm, motor_steps, has_heated_build_platform;
+
+static Machine maylan_m180 = {
+    {18000, 2500, 94.139704, ENDSTOP_IS_MAX}, // x axis
+    {18000, 2500, 94.139704, ENDSTOP_IS_MAX}, // y axis
+    {400, 400, 1600.000000, ENDSTOP_IS_MIN},        // z axis
+    {1600, 96.275201870333662468889989185642, 3200, 1}, // a extruder
+    {1600, 96.275201870333662468889989185642, 3200, 1}, // b extruder
+    1.75, // nominal filament diameter
+    0.85, // nominal packing density
+    0.4, // nozzle diameter
+    2,  // extruder count
+    20, // timeout
+    12,
+};
+
+static Machine threedison_multi = {
+    {18000, 2500, 94.139704, ENDSTOP_IS_MAX}, // x axis
+    {18000, 2500, 80.550653, ENDSTOP_IS_MAX}, // y axis
+    {400, 400, 400.000000, ENDSTOP_IS_MIN},        // z axis
+    {1600, 96.275201870333662468889989185642, 3200, 1}, // a extruder
+    {1600, 96.275201870333662468889989185642, 3200, 1}, // b extruder
+    1.75, // nominal filament diameter
+    0.85, // nominal packing density
+    0.4, // nozzle diameter
+    2,  // extruder count
+    20, // timeout
+    13,
+};
+
+static Machine threedison_pro = {
+    {18000, 2500, 80.242418, ENDSTOP_IS_MAX}, // x axis
+    {18000, 2500, 80.931567, ENDSTOP_IS_MAX}, // y axis
+    {400, 400, 390.029323, ENDSTOP_IS_MIN},        // z axis
+    {1600, 96.275201870333662468889989185642, 3200, 1}, // a extruder
+    {1600, 96.275201870333662468889989185642, 3200, 1}, // b extruder
+    1.75, // nominal filament diameter
+    0.85, // nominal packing density
+    0.4, // nozzle diameter
+    2,  // extruder count
+    20, // timeout
+    14,
+};
+
 #define MACHINE_IS(m) strcasecmp(machine, m) == 0
 
 int gpx_set_machine(Gpx *gpx, char *machine)
@@ -325,6 +370,42 @@ int gpx_set_machine(Gpx *gpx, char *machine)
             VERBOSE( fputs("Ignoring duplicate machine definition: -m r2x" EOL, gpx->log) );
         }
     }
+	else if ( MACHINE_IS("m180") )
+	{
+		if (gpx->machine.type != 12 )
+		{
+		  gpx->machine = maylan_m180;
+		  VERBOSE( fputs("Loading machine definition: Maylan M180" EOL, gpx->log) );
+		}
+		else
+		{
+		  VERBOSE( fputs("Ignoring duplicate machine definition: -m m180" EOL, gpx->log) );
+		}
+	}
+	else if ( MACHINE_IS("3dimulti") )
+	{
+		if (gpx->machine.type != 13 )
+		{
+		  gpx->machine = threedison_multi;
+		  VERBOSE( fputs("Loading machine definition: 3Dson Multi" EOL, gpx->log) );
+		}
+		else
+		{
+		  VERBOSE( fputs("Ignoring duplicate machine definition: -m 3dimulti" EOL, gpx->log) );
+		}
+	}
+	else if ( MACHINE_IS("3dih700") || MACHINE_IS("3dipro") )
+	{
+		if (gpx->machine.type != 14 )
+		{
+		  gpx->machine = threedison_pro;
+		  VERBOSE( fputs("Loading machine definition: 3Dson Pro/3Dson H700" EOL, gpx->log) );
+		}
+		else
+		{
+		  VERBOSE( fputs("Ignoring duplicate machine definition: -m 3dimulti / -m 3dih700" EOL, gpx->log) );
+		}
+	}
     else {
         return ERROR;
     }
