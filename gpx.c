@@ -3460,7 +3460,7 @@ void setCustomMachine(Gpx *gpx, char *args)
 				   token[arrpos]=result[i];
 				   arrpos++;
 			   }
-			   if(arrpos+1 == len)//end of string
+			   if(arrpos+1 >= len)//end of string
 			   {
 				   result=NULL;
 				   restepped[pos] = atof(&token[0]);
