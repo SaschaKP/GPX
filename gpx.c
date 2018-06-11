@@ -33,8 +33,11 @@
 #include <string.h>
 #include <sys/types.h>
 //#include <sys/uio.h>
+#if !defined(_WIN32) && !defined(_WIN64)
 #include <unistd.h>
-
+#else
+#include "unistd_win.h"
+#endif
 #include "gpx.h"
 
 #define A 0
@@ -259,16 +262,14 @@ static Machine threedison_pro = {
 
 // Core-XY machine, 18 tooth GT2 timing pulleys for X and Y
 static Machine core_xy = {
-    {18000, 1000, 15, 2500, 200, 88.888889, ENDSTOP_IS_MAX}, // x axis
-    {18000, 1000, 15, 2500, 200, 88.888889, ENDSTOP_IS_MAX}, // y axis
-    {1170, 150, 10, 1100, 200, 400, ENDSTOP_IS_MIN},        // z axis
-    {1600, 2000, 20, 96.275201870333662468889989185642, 3200, 1}, // a extruder
-    {1600, 2000, 20, 96.275201870333662468889989185642, 3200, 1}, // b extruder
+    {18000, 2500, 88.888889, ENDSTOP_IS_MAX}, // x axis
+    {18000, 2500, 88.888889, ENDSTOP_IS_MAX}, // y axis
+    {1170, 1100, 400, ENDSTOP_IS_MIN},        // z axis
+    {1600, 96.275201870333662468889989185642, 3200, 1}, // a extruder
+    {1600, 96.275201870333662468889989185642, 3200, 1}, // b extruder
     1.75, // nominal filament diameter
     0.85, // nominal packing density
     0.4, // nozzle diameter
-    {0, 0, 0}, // toolhead offsets
-    {0.0050, 0.0550},  // JKN
     1,  // extruder count
     20, // timeout
     15
@@ -276,16 +277,14 @@ static Machine core_xy = {
 
 // Core-XY machine with a slow Z axis ("sz"), 18T GT2 pulleys for X and Y
 static Machine core_xysz = {
-    {18000, 1000, 15, 2500, 200, 88.888889, ENDSTOP_IS_MAX}, // x axis
-    {18000, 1000, 15, 2500, 200, 88.888889, ENDSTOP_IS_MAX}, // y axis
-    {600, 150, 10, 600, 200, 400, ENDSTOP_IS_MIN},        // z axis
-    {1600, 2000, 20, 96.275201870333662468889989185642, 3200, 1}, // a extruder
-    {1600, 2000, 20, 96.275201870333662468889989185642, 3200, 1}, // b extruder
+    {18000, 2500, 88.888889, ENDSTOP_IS_MAX}, // x axis
+    {18000, 2500, 88.888889, ENDSTOP_IS_MAX}, // y axis
+    {600, 600, 400, ENDSTOP_IS_MIN},        // z axis
+    {1600, 96.275201870333662468889989185642, 3200, 1}, // a extruder
+    {1600, 96.275201870333662468889989185642, 3200, 1}, // b extruder
     1.75, // nominal filament diameter
     0.85, // nominal packing density
     0.4, // nozzle diameter
-    {0, 0, 0}, // toolhead offsets
-    {0.0050, 0.0550},  // JKN
     1,  // extruder count
     20, // timeout
     16
@@ -293,16 +292,14 @@ static Machine core_xysz = {
 
 // ZYYX 3D printer, single extruder, 18T GT2 pulleys for X and Y
 static Machine zyyx = {
-    {18000, 850, 12, 2500, 270, 88.888889, ENDSTOP_IS_MAX}, // x axis
-    {18000, 850, 12, 2500, 230, 88.888889, ENDSTOP_IS_MAX}, // y axis
-    {1170, 50, 12, 1100, 195, 400, ENDSTOP_IS_MIN},        // z axis
-    {5000, 5000, 100, 96.275201870333662468889989185642, 3200, 0}, // a extruder
-    {5000, 5000, 100, 96.275201870333662468889989185642, 3200, 0}, // b extruder
+    {18000, 2500, 88.888889, ENDSTOP_IS_MAX}, // x axis
+    {18000, 2500, 88.888889, ENDSTOP_IS_MAX}, // y axis
+    {1170, 1100, 400, ENDSTOP_IS_MIN},        // z axis
+    {5000, 96.275201870333662468889989185642, 3200, 0}, // a extruder
+    {5000, 96.275201870333662468889989185642, 3200, 0}, // b extruder
     1.75, // nominal filament diameter
     0.97, // nominal packing density
     0.4, // nozzle diameter
-    {0, 0, 0}, // toolhead offsets
-    {0.0050, 0.0550},  // JKN
     1,  // extruder count
     20, // timeout
     17
@@ -310,16 +307,14 @@ static Machine zyyx = {
 
 // ZYYX 3D printer, dual extruders, 18T GT2 pulleys for X and Y
 static Machine zyyx_dual = {
-    {18000, 850, 12, 2500, 270, 88.888889, ENDSTOP_IS_MAX}, // x axis
-    {18000, 850, 12, 2500, 230, 88.888889, ENDSTOP_IS_MAX}, // y axis
-    {1170, 50, 12, 1100, 195, 400, ENDSTOP_IS_MIN},        // z axis
-    {5000, 5000, 100, 96.275201870333662468889989185642, 3200, 0}, // a extruder
-    {5000, 5000, 100, 96.275201870333662468889989185642, 3200, 0}, // b extruder
+    {18000, 2500, 88.888889, ENDSTOP_IS_MAX}, // x axis
+    {18000, 2500, 88.888889, ENDSTOP_IS_MAX}, // y axis
+    {1170, 1100, 400, ENDSTOP_IS_MIN},        // z axis
+    {5000, 96.275201870333662468889989185642, 3200, 0}, // a extruder
+    {5000, 96.275201870333662468889989185642, 3200, 0}, // b extruder
     1.75, // nominal filament diameter
     0.97, // nominal packing density
     0.4, // nozzle diameter
-    {33, 0, 0}, // toolhead offsets
-    {0.0050, 0.0550},  // JKN
     2,  // extruder count
     20, // timeout
     18
@@ -327,16 +322,14 @@ static Machine zyyx_dual = {
 
 // ZYYX 3D printer, single extruder, 18T GT2 pulleys for X and Y
 static Machine zyyx_pro = {
-    {18000, 850, 12, 2500, 270, 88.888889, ENDSTOP_IS_MAX}, // x axis
-    {18000, 850, 12, 2500, 230, 88.888889, ENDSTOP_IS_MAX}, // y axis
-    {1170, 50, 12, 1100, 195, 400, ENDSTOP_IS_MIN},        // z axis
-    {5000, 5000, 100, 96.275201870333662468889989185642, 3200, 1}, // a extruder
-    {5000, 5000, 100, 96.275201870333662468889989185642, 3200, 1}, // b extruder
+    {18000, 2500, 88.888889, ENDSTOP_IS_MAX}, // x axis
+    {18000, 2500, 88.888889, ENDSTOP_IS_MAX}, // y axis
+    {1170, 1100, 400, ENDSTOP_IS_MIN},        // z axis
+    {5000, 96.275201870333662468889989185642, 3200, 1}, // a extruder
+    {5000, 96.275201870333662468889989185642, 3200, 1}, // b extruder
     1.75, // nominal filament diameter
     0.97, // nominal packing density
     0.4, // nozzle diameter
-    {0, 0, 0}, // toolhead offsets
-    {0.0050, 0.0550},  // JKN
     1,  // extruder count
     20, // timeout
     19
@@ -2591,7 +2584,7 @@ static int add_filament(Gpx *gpx, char *filament_id, double diameter, unsigned t
     if(index < 0) {
         if(gpx->filamentLength < FILAMENT_MAX) {
             index = gpx->filamentLength++;
-            gpx->filament[index].colour = strdup(filament_id);
+            gpx->filament[index].colour = _strdup(filament_id);
             gpx->filament[index].diameter = diameter;
             gpx->filament[index].temperature = temperature;
             gpx->filament[index].LED = LED;
@@ -3423,82 +3416,6 @@ char *nwstrchr(char* s, const char* c, size_t csize)
     return 0;
 }
 
-void setCustomMachine(Gpx *gpx, char *args)
-{
-   if(!gpx)
-	   gpx_set_machine(gpx, "r1d");
-   int len=0;
-   const char axis[10] = "xXyYzZaAbB";
-   double restepped[6] = {-1.0,-1.0,-1.0,-1.0,-1.0,-1.0};
-   char token[40];
-   char *result = strpbrk(args, axis);
-   while(result != NULL)
-   {
-	   int pos=-1;
-	   for(int i=0; i<11; i++)
-	   {
-		   if(result[0]==axis[i])
-			   pos=(i-(i%2))/2;
-	   }
-	   if(pos>-1)
-	   {
-		   memset(&token[0], 0, sizeof(token));
-		   size_t len=strlen(result);
-		   int arrpos=0;
-		   for(int i=1; i<len && i<40; i++)
-		   {
-			   char *ret = nwstrchr(&result[i], axis, 10);
-			   if(ret)
-			   {
-				   result=ret;
-				   restepped[pos] = atof(&token[0]);
-				   break;
-			   }
-			   else
-			   {
-				   printf("[%i] = %c\n", i-1, result[i]);
-				   token[arrpos]=result[i];
-				   arrpos++;
-			   }
-			   if(arrpos+1 >= len)//end of string
-			   {
-				   result=NULL;
-				   restepped[pos] = atof(&token[0]);
-				   break;
-			   }
-		   }
-	   }
-	   else
-		 break;//we should never get here...
-   }
-   for(int i=0; i<6; ++i)
-   {
-	   if(restepped[i]>0)
-	   {
-		   switch(i)
-		   {
-			   case 0:
-			   gpx->machine.x.steps_per_mm = restepped[i];
-			   break;
-			   case 1:
-			   gpx->machine.y.steps_per_mm = restepped[i];
-			   break;
-			   case 2:
-			   gpx->machine.z.steps_per_mm = restepped[i];
-			   break;
-			   case 3:
-			   gpx->machine.a.steps_per_mm = restepped[i];
-			   break;
-			   case 4:
-			   gpx->machine.b.steps_per_mm = restepped[i];
-			   break;
-			   default:
-			   break;
-		   }
-	   }
-   }
-}
-
 /* See documentation in header file. */
 
 static int ini_parse(Gpx* gpx, const char* filename,
@@ -3571,7 +3488,7 @@ int gpx_set_property(Gpx *gpx, const char* section, const char* property, char* 
             else if(gpx->machine.b.has_heated_build_platform) gpx->override[B].build_platform_temperature = atoi(value);
         }
         else if(PROPERTY_IS("sd_card_path")) {
-            gpx->sdCardPath = strdup(value);
+            gpx->sdCardPath = _strdup(value);
         }
         else if(PROPERTY_IS("verbose")) {
             gpx->flag.verboseMode = atoi(value);
@@ -5533,7 +5450,7 @@ static int port_handler(Gpx *gpx, Sio *sio, char *buffer, size_t length)
         int retry_count = 0;
         do {
             // send the packet
-            if((bytes = write(sio->port, buffer, length)) == -1) {
+            if((bytes = _write(sio->port, buffer, length)) == -1) {
                 return errno;
             }
             else if(bytes != length) {
@@ -5543,7 +5460,7 @@ static int port_handler(Gpx *gpx, Sio *sio, char *buffer, size_t length)
             
             if(sio->bytes_in) {
                 // recieve the response
-                if((bytes = read(sio->port, gpx->buffer.in, 2)) == -1) {
+                if((bytes = _read(sio->port, gpx->buffer.in, 2)) == -1) {
                     return errno;
                 }
                 else if(bytes != 2) {
@@ -5558,7 +5475,7 @@ static int port_handler(Gpx *gpx, Sio *sio, char *buffer, size_t length)
                 // first read
                 for(;;) {
                     // read start byte
-                    if((bytes = read(sio->port, gpx->buffer.in, 1)) == -1) {
+                    if((bytes = _read(sio->port, gpx->buffer.in, 1)) == -1) {
                         return errno;
                     }
                     else if(bytes != 1) {
@@ -5568,7 +5485,7 @@ static int port_handler(Gpx *gpx, Sio *sio, char *buffer, size_t length)
                     if(gpx->buffer.in[0] == 0xD5) break;
                 }
                 // read length
-                if((bytes = read(sio->port, gpx->buffer.in + 1, 1)) == -1) {
+                if((bytes = _read(sio->port, gpx->buffer.in + 1, 1)) == -1) {
                     return errno;
                 }
                 else if(bytes != 1) {
@@ -5577,7 +5494,7 @@ static int port_handler(Gpx *gpx, Sio *sio, char *buffer, size_t length)
             }
             size_t payload_length = gpx->buffer.in[1];
             // recieve payload
-            if((bytes = read(sio->port, gpx->buffer.in + 2, payload_length + 1)) == -1) {
+            if((bytes = _read(sio->port, gpx->buffer.in + 2, payload_length + 1)) == -1) {
                 return errno;
             }
             else if(bytes != payload_length + 1) {

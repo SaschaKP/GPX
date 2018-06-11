@@ -23,7 +23,6 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program; if not, write to the Free Software Foundation,
 //  Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 #include <ctype.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -32,6 +31,12 @@
 
 #if !defined(_WIN32) && !defined(_WIN64)
 #include <unistd.h>
+#else
+#include "getopt.h"
+// strcasecmp() is not provided on Windows
+// _stricmp() is equivalent but may require <string.h>
+#define _strcasecmp _stricmp
+#define strcasecmp _stricmp
 #endif
 
 #if defined(SERIAL_SUPPORT)
@@ -44,13 +49,6 @@ typedef long speed_t;
      "by this build of GPX"
 #endif
 
-#if defined(_WIN32) || defined(_WIN64)
-#include "getopt.h"
-    // strcasecmp() is not provided on Windows
-    // _stricmp() is equivalent but may require <string.h>
-#define strcasecmp _stricmp
-#endif
-
 #include "gpx.h"
 
 // Global variables
@@ -61,6 +59,82 @@ static FILE *file_in = NULL;
 static FILE *file_out = NULL;
 static FILE *file_out2 = NULL;
 static int sio_port = -1;
+
+void setCustomMachine(Gpx *gpx, char *args)
+{
+	if (!gpx)
+		gpx_set_machine(gpx, "r1d");
+	int len = 0;
+	const char axis[10] = "xXyYzZaAbB";
+	double restepped[6] = { -1.0,-1.0,-1.0,-1.0,-1.0,-1.0 };
+	char token[40];
+	char *result = strpbrk(args, axis);
+	while (result != NULL)
+	{
+		int pos = -1;
+		for (int i = 0; i<11; i++)
+		{
+			if (result[0] == axis[i])
+				pos = (i - (i % 2)) / 2;
+		}
+		if (pos>-1)
+		{
+			memset(&token[0], 0, sizeof(token));
+			size_t len = strlen(result);
+			int arrpos = 0;
+			for (int i = 1; i<len && i<40; i++)
+			{
+				char *ret = nwstrchr(&result[i], axis, 10);
+				if (ret)
+				{
+					result = ret;
+					restepped[pos] = atof(&token[0]);
+					break;
+				}
+				else
+				{
+					printf("[%i] = %c\n", i - 1, result[i]);
+					token[arrpos] = result[i];
+					arrpos++;
+				}
+				if (arrpos + 1 >= len)//end of string
+				{
+					result = NULL;
+					restepped[pos] = atof(&token[0]);
+					break;
+				}
+			}
+		}
+		else
+			break;//we should never get here...
+	}
+	for (int i = 0; i<6; ++i)
+	{
+		if (restepped[i]>0)
+		{
+			switch (i)
+			{
+			case 0:
+				gpx->machine.x.steps_per_mm = restepped[i];
+				break;
+			case 1:
+				gpx->machine.y.steps_per_mm = restepped[i];
+				break;
+			case 2:
+				gpx->machine.z.steps_per_mm = restepped[i];
+				break;
+			case 3:
+				gpx->machine.a.steps_per_mm = restepped[i];
+				break;
+			case 4:
+				gpx->machine.b.steps_per_mm = restepped[i];
+				break;
+			default:
+				break;
+			}
+		}
+	}
+}
 
 // cleanup code in case we encounter an error that causes the program to exit
 
@@ -195,7 +269,9 @@ static void sio_open(char *filename, speed_t baud_rate)
 {
     struct termios tp;
     // open and configure the serial port
-    if((sio_port = open(filename, O_RDWR | O_NOCTTY | O_NONBLOCK)) < 0) {
+    if((sio_port = open(filename, O_RDWR | O_NOCTTY | O_NONBLOCK)) < 0)
+	{
+		
         perror("Error opening port");
         exit(-1);
     }
@@ -248,8 +324,7 @@ static void sio_open(char *filename, speed_t baud_rate)
         perror("Error setting port attributes");
         exit(-1);
     }
-    
-    sleep(2);
+	sleep(2);
     if(tcflush(sio_port, TCIOFLUSH) < 0) {
         perror("Error flushing port");
         exit(-1);
