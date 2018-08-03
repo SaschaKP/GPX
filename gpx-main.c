@@ -93,7 +93,6 @@ void setCustomMachine(Gpx *gpx, char *args)
 				}
 				else
 				{
-					printf("[%i] = %c\n", i - 1, result[i]);
 					token[arrpos] = result[i];
 					arrpos++;
 				}
@@ -397,7 +396,7 @@ int main(int argc, char * argv[])
     // READ COMMAND LINE
     
     // get the command line options
-    while ((c = getopt(argc, argv, "b:c:de:gf:ilm:n:pqrstuvwx:y:z:?")) != -1) {
+    while ((c = getopt(argc, argv, "b:c:de:gf:ilm:n:pqrstu:vwx:y:z:?")) != -1) {
         switch (c) {
             case 'b':
 #if !defined(SERIAL_SUPPORT)
