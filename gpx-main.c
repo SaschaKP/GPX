@@ -393,8 +393,9 @@ int main(int argc, char * argv[])
         }
     }
     
+	int pos=0;
+	char logbuff[BUFFER_MAX + 1];
     // READ COMMAND LINE
-    
     // get the command line options
     while ((c = getopt(argc, argv, "b:c:de:gf:ilm:n:pqrstu:vwx:y:z:?")) != -1) {
         switch (c) {
@@ -517,6 +518,27 @@ int main(int argc, char * argv[])
             default:
                 usage();
         }
+		if(log_to_file && c != -1)
+		{
+			logbuff[pos] = c;
+			pos++;
+			if(optarg != NULL)
+			{
+				logbuff[pos] = '=';
+				pos++;
+				for(int i = 0; pos < BUFFER_MAX && optarg[i] != '\0'; pos++, i++)
+				{
+					logbuff[pos] = optarg[i];
+				}
+				logbuff[pos] = ' ';
+				pos++;
+			}
+			else
+			{
+				logbuff[pos] = ' ';
+				pos++;
+			}
+		}
     }
     
     argc -= optind;
@@ -550,6 +572,11 @@ int main(int argc, char * argv[])
             gpx.log = stderr;
             perror("Error opening log");
         }
+		else
+		{
+			logbuff[pos+1] = '\0';
+			fprintf(gpx.log, "Command line args: %s" EOL, logbuff);
+		}
     }
     
     // READ CONFIGURATION
@@ -570,7 +597,7 @@ int main(int argc, char * argv[])
     if(baud_rate == B57600 && gpx.machine.type >= MACHINE_TYPE_REPLICATOR_1) {
         if(gpx.flag.verboseMode) fputs("WARNING: a 57600 bps baud rate will cause problems with Repicator 2/2X Mightyboards" EOL, gpx.log);
     }
-    
+
     // OPEN FILES AND PORTS FOR INPUT AND OUTPUT
     
     if(standard_io) {

@@ -304,6 +304,7 @@ extern "C" {
             unsigned verboseMode:1;     // verbose output
             unsigned logMessages:1;     // enable stderr message logging
             unsigned rewrite5D:1;       // calculate 5D E values rather than scaling them
+			unsigned onlyExplicitToolChange:1; // no implicit tool change when Tn used as a parameter
         
         // STATE
             unsigned programState:8;    // gcode program state used to trigger start and end code sequences

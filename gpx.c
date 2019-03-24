@@ -561,6 +561,8 @@ static int pause_at_zpos(Gpx *gpx, float z_positon);
 
 void gpx_initialize(Gpx *gpx, int firstTime)
 {
+	if(!gpx) return;
+
     int i;
     gpx->buffer.ptr = gpx->buffer.out;
     // we default to using pipes
@@ -683,6 +685,7 @@ void gpx_initialize(Gpx *gpx, int firstTime)
         gpx->flag.verboseMode = 0;
         gpx->flag.logMessages = 1; // logging is enabled by default
         gpx->flag.rewrite5D = 0;
+		gpx->flag.onlyExplicitToolChange = 0;
     }
 
     // STATE
@@ -837,7 +840,7 @@ static long read_bytes(Gpx *gpx, char *data, long length)
     return length;
 }
 
-static long write_string(Gpx *gpx, char *string, long length)
+static long write_string(Gpx *gpx, const char *string, long length)
 {
     long l = length;
     while(l--) {
@@ -911,7 +914,9 @@ static int end_frame(Gpx *gpx)
     }
     size_t length = gpx->buffer.ptr - gpx->buffer.out;
     gpx->accumulated.bytes += length;
-    if(gpx->callbackHandler) return gpx->callbackHandler(gpx, gpx->callbackData, gpx->buffer.out, length);
+    if(gpx->callbackHandler) {
+        return gpx->callbackHandler(gpx, gpx->callbackData, gpx->buffer.out, length);
+    }
     return SUCCESS;
 }
 
@@ -984,10 +989,10 @@ static int get_longest_dda(Gpx *gpx)
     int longestDDA = gpx->longestDDA;
     if(longestDDA == 0) {
         longestDDA = (int)(60 * 1000000.0 / (gpx->machine.x.max_feedrate * gpx->machine.x.steps_per_mm));
-    
+
         int axisDDA = (int)(60 * 1000000.0 / (gpx->machine.y.max_feedrate * gpx->machine.y.steps_per_mm));
         if(longestDDA < axisDDA) longestDDA = axisDDA;
-    
+
         axisDDA = (int)(60 * 1000000.0 / (gpx->machine.z.max_feedrate * gpx->machine.z.steps_per_mm));
         if(longestDDA < axisDDA) longestDDA = axisDDA;
         gpx->longestDDA = longestDDA;
@@ -1121,7 +1126,7 @@ static Point5d delta_steps(Gpx *gpx,Point5d deltaMM)
 #define COMMAND_OFFSET 2
 #define EXTRUDER_ID_OFFSET 3
 #define QUERY_COMMAND_OFFSET 4
-#define EEPROM_LENGTH_OFFSET 8
+#define EEPROM_LENGTH_OFFSET 5
 
 // 00 - Get version
 
@@ -1944,7 +1949,7 @@ static int queue_new_point(Gpx *gpx, unsigned milliseconds)
     Point5d target;
     
     // the function is only called by dwell, which is by definition stationary,
-    // so set zero relitive position change
+    // so set zero relative position change
 
     target.x = 0;
     target.y = 0;
@@ -2227,6 +2232,7 @@ static int display_message(Gpx *gpx, char *message, unsigned vPos, unsigned hPos
 static int set_build_progress(Gpx *gpx, unsigned percent)
 {
     if(percent > 100) percent = 100;
+	gpx->current.percent = percent;
     
     begin_frame(gpx);
     
@@ -2278,8 +2284,9 @@ static int factory_defaults(Gpx *gpx)
 
 // 153 - Build start notification
 
-static int start_build(Gpx *gpx, char * filename)
+static int start_build(Gpx *gpx, const char * filename)
 {
+	size_t len;
     begin_frame(gpx);
     
     write_8(gpx, 153);
@@ -2288,7 +2295,15 @@ static int start_build(Gpx *gpx, char * filename)
     write_32(gpx, 0);
 
     // 1+N bytes: Name of the build, in ASCII, null terminated
-    write_string(gpx, filename, strlen(filename));
+	// 32 bytes max in a payload
+    //  4 bytes used for "reserved"
+    //  1 byte used for NUL terminator
+    // that leaves 27 bytes for the build name
+    // (But the LCD actually has far less room)
+    // We'll just truncate at 24
+    len = strlen(filename);
+    if(len > 24) len = 24;
+    write_string(gpx, filename, len);
     
     return end_frame(gpx);
 }
@@ -2554,6 +2569,25 @@ static int pause_at_zpos(Gpx *gpx, float z_positon)
     
     // uint8: pause at Z coordinate or 0.0 to disable
     write_float(gpx, z_positon);
+    
+    return end_frame(gpx);
+}
+
+// 253 - PID Autotune
+
+static int pid_autotune(Gpx *gpx, unsigned extruder, unsigned cycles, unsigned temp)
+{
+    begin_frame(gpx);
+    
+    write_8(gpx, 253);
+    
+    write_8(gpx, extruder);
+
+    // uint8: cycles, number of attempts
+    write_8(gpx, cycles);
+	
+	// uint16: temperature, 150-320 valid
+	write_16(gpx, temp);
     
     return end_frame(gpx);
 }
@@ -2844,7 +2878,7 @@ static void update_current_position(Gpx *gpx)
         }
     }
     gpx->current.position = gpx->target.position;
-    if(!gpx->flag.relativeCoordinates) gpx->axis.positionKnown |= gpx->command.flag & gpx->axis.mask;
+    if(!gpx->flag.relativeCoordinates) gpx->axis.positionKnown |= (gpx->command.flag & gpx->axis.mask);
 }
 
 // TOOL CHANGE
@@ -2873,6 +2907,38 @@ static int do_tool_change(Gpx *gpx, int timeout) {
     }
     // change current toolhead in order to apply the calibration offset
     CALL( change_extruder_offset(gpx, gpx->target.extruder) );
+
+    // MBI's firmware and Sailfish 7.7 and earlier effect a tool change
+    // by adding the tool offset to the next move command.  That has two
+    // undesirable effects:
+    //
+    //  1. It changes the slope in the XY plane of the move, and
+    //  2. Since the firmwares do not recompute the distance, the acceleration
+    //       behavior is wrong.
+    //
+    // Item 2 is particularly foul in some instances causing thumps,
+    // lurches, or other odd behaviors as things move at the wrong speed
+    // (either too fast or too slow).
+    //
+    // Chow Loong Jin's simple solution solves both of these by queuing
+    // an *unaccelerated* move to the current position.  Since it is
+    // unaccelerated, there's no need for proper distance calcs and the
+    // firmware's failure to re-calc that info has no impact.  And since
+    // the motion is to the current position all that occurs is a simple
+    // travel move that does the tool offset.  The next useful motion
+    // command does not have its slope perturbed and will occur with the
+    // proper acceleration profile.
+    //
+    // Only gotcha here is that we may only do this when the position is
+    // well defined.  For example, we cannot do this for a tool change
+    // immediately after a 'recall home offsets' command.
+
+    if(XYZ_BIT_MASK == (gpx->axis.positionKnown & XYZ_BIT_MASK)) {
+	 gpx->target.position = gpx->current.position;
+	 gpx->axis.mask = XYZ_BIT_MASK;
+	 CALL( queue_absolute_point(gpx) );
+    }
+
     // set current extruder so changes in E are expressed as changes to A or B
     gpx->current.extruder = gpx->target.extruder;
     return SUCCESS;
@@ -2954,10 +3020,10 @@ static char *normalize_comment(char *p) {
  ;@<STRING> <STRING> <FLOAT> <FLOAT>mm <INTEGER>c #<HEX> (<STRING>)
 
  MACRO:= ';' '@' COMMAND COMMENT EOL
- COMMAND:= PRINTER | ENABLE | FILAMENT | EXTRUDER | SLICER | START| PAUSE
+ COMMAND:= PRINTER | ENABLE | FILAMENT | EXTRUDER | SLICER | START | PAUSE | FLAVOR | BUILD
  COMMENT:= S+ '(' [^)]* ')' S+
- PRINTER:= ('printer' | 'machine' | 'slicer') (TYPE | PACKING_DENSITY | DIAMETER | TEMP | RGB)+
- TYPE:=  S+ ('c3' | 'c4' | 'cp4' | 'cpp' | 't6' | 't7' | 't7d' | 'r1' | 'r1d' | 'r2' | 'r2h' | 'r2x')
+ PRINTER:= ('printer' | 'machine' | 'slicer') (TYPE | PACKING_DENSITY | DIAMETER | TEMP | RGB )+
+ TYPE:=  S+ ('c3' | 'c4' | 'cp4' | 'cpp' | 'cxy' | 'cxysz' | 't6' | 't7' | 't7d' | 'r1' | 'r1d' | 'r2' | 'r2h' | 'r2x' | 'z' | 'zd' )
  PACKING_DENSITY:= S+ DIGIT+ ('.' DIGIT+)?
  DIAMETER:= S+ DIGIT+ ('.' DIGIT+)? 'm' 'm'?
  TEMP:= S+ DIGIT+ 'c'
@@ -2972,11 +3038,14 @@ static char *normalize_comment(char *p) {
  START:= 'start' (FILAMENT_ID | TEMPERATURE)
  PAUSE:= 'pause' (ZPOS | FILAMENT_ID | TEMPERATURE)+
  ZPOS:= S+ DIGIT+ ('.' DIGIT+)?
-
+ BUILD:= 'build' BUILD_NAME
+ BUILD_NAME:= S+ ALPHA ALPHA_NUMERIC*
+ FLAVOR:= 'flavor' GCODE_FLAVOR
+ GCODE_FLAVOR:= S+ ('makerbot' | 'reprap')
  */
 
-#define MACRO_IS(token) strcmp(token, macro) == 0
-#define NAME_IS(n) strcasecmp(name, n) == 0
+#define MACRO_IS(token) (strcasecmp(token, macro) == 0)
+#define NAME_IS(n) (strcasecmp(name, n) == 0)
 
 static int parse_macro(Gpx *gpx, const char* macro, char *p)
 {
@@ -3075,12 +3144,29 @@ static int parse_macro(Gpx *gpx, const char* macro, char *p)
                 }
             }
             else if(NAME_IS("progress")) gpx->flag.buildProgress = 1;
+			else if(NAME_IS("explicit_tool_change")) gpx->flag.onlyExplicitToolChange = 1;
             else {
                 SHOW( fprintf(gpx->log, "(line %u) Semantic error: @enable macro with unrecognised parameter '%s'" EOL, gpx->lineNumber, name) );
             }
         }
         else {
             SHOW( fprintf(gpx->log, "(line %u) Syntax error: @enable macro with missing parameter" EOL, gpx->lineNumber) );
+        }
+    }
+	// ;@disable ditto
+    // ;@disable progress
+    // ;@disable explicit_tool_change
+    else if(MACRO_IS("disable")) {
+        if(name) {
+            if(NAME_IS("ditto")) gpx->flag.dittoPrinting = 0;
+            else if(NAME_IS("progress")) gpx->flag.buildProgress = 0;
+            else if(NAME_IS("explicit_tool_change")) gpx->flag.onlyExplicitToolChange = 0;
+            else {
+                SHOW( fprintf(gpx->log, "(line %u) Semantic error: @disable macro with unrecognised parameter '%s'" EOL, gpx->lineNumber, name) );
+            }
+        }
+        else {
+            SHOW( fprintf(gpx->log, "(line %u) Syntax error: @disable macro with missing parameter" EOL, gpx->lineNumber) );
         }
     }
     // ;@filament <NAME> <DIAMETER>mm <TEMP>c #<LED-COLOUR>
@@ -3808,7 +3894,7 @@ int gpx_convert_line(Gpx *gpx, char *gcode_line)
     }
     
     // revert tool selection to current extruder (Makerbot Tn is not sticky)
-    if(!gpx->flag.reprapFlavor) gpx->target.extruder = gpx->current.extruder;
+    if(!gpx->flag.reprapFlavor || gpx->flag.onlyExplicitToolChange) gpx->target.extruder = gpx->current.extruder;
     
     // change the extruder selection (in the virtual tool carosel)
     if(gpx->command.flag & T_IS_SET && !gpx->flag.dittoPrinting) {
@@ -3962,6 +4048,8 @@ int gpx_convert_line(Gpx *gpx, char *gcode_line)
             case 28: {
                 unsigned endstop_max = 0;
                 unsigned endstop_min = 0;
+				// none means all
+                if((gpx->command.flag & gpx->axis.mask) == 0) gpx->command.flag |= XYZ_BIT_MASK;
                 if(gpx->command.flag & F_IS_SET) gpx->current.feedrate = gpx->command.f;
                 
                 if(gpx->command.flag & X_IS_SET) {
@@ -4001,10 +4089,10 @@ int gpx_convert_line(Gpx *gpx, char *gcode_line)
                 }
                 else {
                     if(endstop_min) {
-                        CALL( home_axes(gpx, endstop_min, ENDSTOP_IS_MAX) );
+                        CALL( home_axes(gpx, endstop_min, ENDSTOP_IS_MIN) );
                     }
                     if(endstop_max) {
-                        CALL( home_axes(gpx, endstop_max, ENDSTOP_IS_MIN) );
+                        CALL( home_axes(gpx, endstop_max, ENDSTOP_IS_MAX) );
                     }
                 }
                 command_emitted++;
@@ -4134,7 +4222,8 @@ int gpx_convert_line(Gpx *gpx, char *gcode_line)
                 break;
                 // M1 - Program pause
             case 1:
-                break;
+                pause_resume(gpx);
+				break;
                 // M2 - Program end
             case 2:
                 if(program_is_running()) {
@@ -4167,7 +4256,7 @@ int gpx_convert_line(Gpx *gpx, char *gcode_line)
                     command_emitted++;
                 }
                 // wait for extruder
-                if(gpx->flag.dittoPrinting) {
+                if(gpx->flag.dittoPrinting || (gpx->command.m == 116 && !(gpx->command.flag & T_IS_SET))) {
                     if(gpx->tool[B].nozzle_temperature > 0) {
                         CALL( wait_for_extruder(gpx, B, timeout) );
                     }
@@ -4323,6 +4412,7 @@ int gpx_convert_line(Gpx *gpx, char *gcode_line)
                         CALL( start_build(gpx, gpx->buildName) );
                         CALL( set_build_progress(gpx, 0) );
                         // start extruder in a known state
+						//gpx->current.extruder = gpx->target.extruder = A;
                         CALL( change_extruder_offset(gpx, gpx->current.extruder) );
                     }
                     else if(program_is_running()) {
@@ -4392,7 +4482,7 @@ int gpx_convert_line(Gpx *gpx, char *gcode_line)
                 // M103 - Turn extruder off
             case 103:
                 if(gpx->flag.dittoPrinting) {
-                    CALL( set_steppers(gpx, A_IS_SET|B_IS_SET, 1) );
+                    CALL( set_steppers(gpx, A_IS_SET|B_IS_SET, 0) );
                     command_emitted++;
                     gpx->tool[A].motor_enabled = gpx->tool[B].motor_enabled = 0;
                 }
@@ -4766,6 +4856,31 @@ int gpx_convert_line(Gpx *gpx, char *gcode_line)
                 command_emitted++;
                 break;
             }
+				// M303 - PID autotuning
+			case 303: {
+				if(gpx->command.flag & E_IS_SET)
+				{
+					unsigned extruder = (unsigned)gpx->command.e;
+					if(extruder==0 || extruder==1)
+					{
+						unsigned temp = 200;
+						if(gpx->command.flag & S_IS_SET)
+							temp = (unsigned)gpx->command.s;
+						if(temp<150)
+							temp=150;
+						if(temp>320)
+							temp=320;
+						unsigned cycles = 8;
+						if(gpx->command.flag & P_IS_SET)
+							cycles = (unsigned)gpx->command.p;
+						if(cycles>30)
+							cycles=30;
+						CALL(pid_autotune(gpx, extruder, cycles, temp));
+					}
+				}
+				command_emitted++;
+                break;
+			}
                 
                 // M320 - Acceleration on for subsequent instructions
             case 320:
@@ -4820,20 +4935,20 @@ int gpx_convert_line(Gpx *gpx, char *gcode_line)
                 SHOW( fprintf(gpx->log, "(line %u) Syntax warning: unsupported mcode command 'M%u'" EOL, gpx->lineNumber, gpx->command.m) );
         }
     }
-    else {
-        // X,Y,Z,A,B,E,F
-        if(gpx->command.flag & (AXES_BIT_MASK | F_IS_SET)) {
+	// X,Y,Z,A,B,E,F
+    else if(gpx->command.flag & (AXES_BIT_MASK | F_IS_SET)) {
+        if(!(gpx->command.flag & COMMENT_IS_SET)) {
             CALL( calculate_target_position(gpx) );
             CALL( queue_ext_point(gpx, 0.0) );
             update_current_position(gpx);
             command_emitted++;
         }
-        // Tn
-        else if(!gpx->flag.dittoPrinting && gpx->target.extruder != gpx->current.extruder) {
-            int timeout = gpx->command.flag & P_IS_SET ? (int)gpx->command.p : MAX_TIMEOUT;
-            CALL( do_tool_change(gpx, timeout) );
-            command_emitted++;
-        }
+    }
+    // Tn
+    else if(gpx->command.flag & T_IS_SET && !gpx->flag.dittoPrinting && gpx->target.extruder != gpx->current.extruder) {
+        int timeout = gpx->command.flag & P_IS_SET ? (int)gpx->command.p : MAX_TIMEOUT;
+        CALL( do_tool_change(gpx, timeout) );
+        command_emitted++;
     }
     // check for pending pause @ zPos
     if(gpx->flag.doPauseAtZPos) {

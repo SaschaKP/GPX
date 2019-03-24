@@ -26,7 +26,7 @@ gpx: $(OBJECTS)
 
 # To remove generated files
 clean:
-	rm -f gpx $(OBJECTS)
+	rm -f gpx gpx.exe $(OBJECTS)
 	rm -f $(ARCHIVE).tar.gz
 	rm -f $(ARCHIVE).zip
 	rm -f $(ARCHIVE).dmg
