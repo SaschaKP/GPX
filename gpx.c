@@ -2558,6 +2558,25 @@ static int pause_at_zpos(Gpx *gpx, float z_positon)
     return end_frame(gpx);
 }
 
+// 253 - PID Autotune
+
+static int pid_autotune(Gpx *gpx, unsigned extruder, unsigned cycles, unsigned temp)
+{
+    begin_frame(gpx);
+    
+    write_8(gpx, 253);
+    
+    write_8(gpx, extruder);
+
+    // uint8: cycles, number of attempts
+    write_8(gpx, cycles);
+	
+	// uint16: temperature, 150-320 valid
+	write_16(gpx, temp);
+    
+    return end_frame(gpx);
+}
+
 // COMMAND @ ZPOS FUNCTIONS
 
 // find an existing filament definition
@@ -2873,6 +2892,41 @@ static int do_tool_change(Gpx *gpx, int timeout) {
     }
     // change current toolhead in order to apply the calibration offset
     CALL( change_extruder_offset(gpx, gpx->target.extruder) );
+	
+    // change current toolhead in order to apply the calibration offset
+    CALL( change_extruder_offset(gpx, gpx->target.extruder) );
+
+    // MBI's firmware and Sailfish 7.7 and earlier effect a tool change
+    // by adding the tool offset to the next move command.  That has two
+    // undesirable effects:
+    //
+    //  1. It changes the slope in the XY plane of the move, and
+    //  2. Since the firmwares do not recompute the distance, the acceleration
+    //       behavior is wrong.
+    //
+    // Item 2 is particularly foul in some instances causing thumps,
+    // lurches, or other odd behaviors as things move at the wrong speed
+    // (either too fast or too slow).
+    //
+    // Chow Loong Jin's simple solution solves both of these by queuing
+    // an *unaccelerated* move to the current position.  Since it is
+    // unaccelerated, there's no need for proper distance calcs and the
+    // firmware's failure to re-calc that info has no impact.  And since
+    // the motion is to the current position all that occurs is a simple
+    // travel move that does the tool offset.  The next useful motion
+    // command does not have its slope perturbed and will occur with the
+    // proper acceleration profile.
+    //
+    // Only gotcha here is that we may only do this when the position is
+    // well defined.  For example, we cannot do this for a tool change
+    // immediately after a 'recall home offsets' command.
+
+    if(XYZ_BIT_MASK == (gpx->axis.positionKnown & XYZ_BIT_MASK)) {
+	 gpx->target.position = gpx->current.position;
+	 gpx->axis.mask = XYZ_BIT_MASK;
+	 CALL( queue_absolute_point(gpx) );
+    }
+
     // set current extruder so changes in E are expressed as changes to A or B
     gpx->current.extruder = gpx->target.extruder;
     return SUCCESS;
@@ -4323,6 +4377,7 @@ int gpx_convert_line(Gpx *gpx, char *gcode_line)
                         CALL( start_build(gpx, gpx->buildName) );
                         CALL( set_build_progress(gpx, 0) );
                         // start extruder in a known state
+						gpx->current.extruder = gpx->target.extruder = A;
                         CALL( change_extruder_offset(gpx, gpx->current.extruder) );
                     }
                     else if(program_is_running()) {
@@ -4766,6 +4821,31 @@ int gpx_convert_line(Gpx *gpx, char *gcode_line)
                 command_emitted++;
                 break;
             }
+				// M303 - PID autotuning
+			case 303: {
+				if(gpx->command.flag & E_IS_SET)
+				{
+					unsigned extruder = (unsigned)gpx->command.e;
+					if(extruder==0 || extruder==1)
+					{
+						unsigned temp = 200;
+						if(gpx->command.flag & S_IS_SET)
+							temp = (unsigned)gpx->command.s;
+						if(temp<150)
+							temp=150;
+						if(temp>320)
+							temp=320;
+						unsigned cycles = 8;
+						if(gpx->command.flag & P_IS_SET)
+							cycles = (unsigned)gpx->command.p;
+						if(cycles>30)
+							cycles=30;
+						CALL(pid_autotune(gpx, extruder, cycles, temp));
+					}
+				}
+				command_emitted++;
+                break;
+			}
                 
                 // M320 - Acceleration on for subsequent instructions
             case 320:
@@ -4820,20 +4900,20 @@ int gpx_convert_line(Gpx *gpx, char *gcode_line)
                 SHOW( fprintf(gpx->log, "(line %u) Syntax warning: unsupported mcode command 'M%u'" EOL, gpx->lineNumber, gpx->command.m) );
         }
     }
-    else {
-        // X,Y,Z,A,B,E,F
-        if(gpx->command.flag & (AXES_BIT_MASK | F_IS_SET)) {
+	// X,Y,Z,A,B,E,F
+    else if(gpx->command.flag & (AXES_BIT_MASK | F_IS_SET)) {
+        if(!(gpx->command.flag & COMMENT_IS_SET)) {
             CALL( calculate_target_position(gpx) );
             CALL( queue_ext_point(gpx, 0.0) );
             update_current_position(gpx);
             command_emitted++;
         }
-        // Tn
-        else if(!gpx->flag.dittoPrinting && gpx->target.extruder != gpx->current.extruder) {
-            int timeout = gpx->command.flag & P_IS_SET ? (int)gpx->command.p : MAX_TIMEOUT;
-            CALL( do_tool_change(gpx, timeout) );
-            command_emitted++;
-        }
+    }
+    // Tn
+    else if(gpx->command.flag & T_IS_SET && !gpx->flag.dittoPrinting && gpx->target.extruder != gpx->current.extruder) {
+        int timeout = gpx->command.flag & P_IS_SET ? (int)gpx->command.p : MAX_TIMEOUT;
+        CALL( do_tool_change(gpx, timeout) );
+        command_emitted++;
     }
     // check for pending pause @ zPos
     if(gpx->flag.doPauseAtZPos) {
