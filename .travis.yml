@@ -1,3 +1,3 @@
 language: c
 sudo: false
-script: make
+script: make SHARED=0 CC='gcc -static'
