@@ -28,11 +28,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "getopt.h"
 
 #if !defined(_WIN32) && !defined(_WIN64)
 #include <unistd.h>
 #else
-#include "getopt.h"
+//#include "getopt.h"
 // strcasecmp() is not provided on Windows
 // _stricmp() is equivalent but may require <string.h>
 #define _strcasecmp _stricmp
