@@ -50,7 +50,7 @@ int getopt(int argc, char **argv, char *opts)
     }
 	optopt = c = argv[optind][sp];
     if(c == ':' || (cp = strchr(opts, c)) == NULL) {
-        fprintf(stderr, "Command line error: illegal option -- %c\r\n", c);
+        fprintf(stderr, "Command line error: illegal option -- %c" EOL, c);
         if(argv[optind][++sp] == '\0') {
             optind++;
             sp = 1;
@@ -62,7 +62,7 @@ int getopt(int argc, char **argv, char *opts)
             optarg = &argv[optind++][sp+1];
         }
         else if(++optind >= argc) {
-            fprintf(stderr, "Command line error: option requires an argument -- %c\r\n", c);
+            fprintf(stderr, "Command line error: option requires an argument -- %c" EOL, c);
             sp = 1;
             return('?');
         }

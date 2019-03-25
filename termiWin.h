@@ -206,7 +206,6 @@ int __closeSerial(int fd);
 
 //get Handle out of the COM structure
 HANDLE getHandle();
-
 #endif
 
 #ifndef _WIN32

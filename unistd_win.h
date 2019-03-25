@@ -35,6 +35,7 @@
 #define isatty _isatty
 #define lseek _lseek
 /* read, write, and close are NOT being #defined here, because while there are file handle specific versions for Windows, they probably don't work for sockets. You need to look at your app and consider whether to call e.g. closesocket(). */
+//#define  M_PI 3.14159265358979323846  /* pi */
 
 #ifdef _WIN64
 #define ssize_t __int64

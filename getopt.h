@@ -19,6 +19,11 @@ Added documentation to this header, so know what everything does.
 
 #ifndef __getopt_h__
 #define __getopt_h__
+#ifdef _WIN32
+#   define EOL "\r\n"
+#else
+#   define EOL "\n"
+#endif
 
 #ifdef __cplusplus
 extern "C" {

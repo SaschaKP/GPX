@@ -491,8 +491,6 @@ int __writeToSerial(int fd, char* buffer, int count) {
 }
 
 int __openSerial(char* portname, int opt) {
-
-
 	if (strlen(portname) < 4) return -1;
 
 	//COMxx
