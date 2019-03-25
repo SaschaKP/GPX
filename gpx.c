@@ -2618,7 +2618,7 @@ static int add_filament(Gpx *gpx, char *filament_id, double diameter, unsigned t
     if(index < 0) {
         if(gpx->filamentLength < FILAMENT_MAX) {
             index = gpx->filamentLength++;
-            gpx->filament[index].colour = _strdup(filament_id);
+            gpx->filament[index].colour = strdup(filament_id);
             gpx->filament[index].diameter = diameter;
             gpx->filament[index].temperature = temperature;
             gpx->filament[index].LED = LED;
@@ -3574,7 +3574,7 @@ int gpx_set_property(Gpx *gpx, const char* section, const char* property, char* 
             else if(gpx->machine.b.has_heated_build_platform) gpx->override[B].build_platform_temperature = atoi(value);
         }
         else if(PROPERTY_IS("sd_card_path")) {
-            gpx->sdCardPath = _strdup(value);
+            gpx->sdCardPath = strdup(value);
         }
         else if(PROPERTY_IS("verbose")) {
             gpx->flag.verboseMode = atoi(value);
@@ -5565,7 +5565,7 @@ static int port_handler(Gpx *gpx, Sio *sio, char *buffer, size_t length)
         int retry_count = 0;
         do {
             // send the packet
-            if((bytes = _write(sio->port, buffer, length)) == -1) {
+            if((bytes = write(sio->port, buffer, length)) == -1) {
                 return errno;
             }
             else if(bytes != length) {
@@ -5575,7 +5575,7 @@ static int port_handler(Gpx *gpx, Sio *sio, char *buffer, size_t length)
             
             if(sio->bytes_in) {
                 // recieve the response
-                if((bytes = _read(sio->port, gpx->buffer.in, 2)) == -1) {
+                if((bytes = read(sio->port, gpx->buffer.in, 2)) == -1) {
                     return errno;
                 }
                 else if(bytes != 2) {
@@ -5590,7 +5590,7 @@ static int port_handler(Gpx *gpx, Sio *sio, char *buffer, size_t length)
                 // first read
                 for(;;) {
                     // read start byte
-                    if((bytes = _read(sio->port, gpx->buffer.in, 1)) == -1) {
+                    if((bytes = read(sio->port, gpx->buffer.in, 1)) == -1) {
                         return errno;
                     }
                     else if(bytes != 1) {
@@ -5600,7 +5600,7 @@ static int port_handler(Gpx *gpx, Sio *sio, char *buffer, size_t length)
                     if(gpx->buffer.in[0] == 0xD5) break;
                 }
                 // read length
-                if((bytes = _read(sio->port, gpx->buffer.in + 1, 1)) == -1) {
+                if((bytes = read(sio->port, gpx->buffer.in + 1, 1)) == -1) {
                     return errno;
                 }
                 else if(bytes != 1) {
@@ -5609,7 +5609,7 @@ static int port_handler(Gpx *gpx, Sio *sio, char *buffer, size_t length)
             }
             size_t payload_length = gpx->buffer.in[1];
             // recieve payload
-            if((bytes = _read(sio->port, gpx->buffer.in + 2, payload_length + 1)) == -1) {
+            if((bytes = read(sio->port, gpx->buffer.in + 2, payload_length + 1)) == -1) {
                 return errno;
             }
             else if(bytes != payload_length + 1) {
