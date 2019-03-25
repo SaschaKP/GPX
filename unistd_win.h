@@ -22,7 +22,7 @@
 //#define   X_OK    1       /* execute permission - unsupported in windows*/
 #define F_OK    0       /* Test for existence.  */
 
-#define  M_PI                   3.14159265358979323846  /* pi */
+//#define  M_PI                   3.14159265358979323846  /* pi */
 #define sleep Sleep
 
 #define access _access
