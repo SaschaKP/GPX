@@ -178,7 +178,6 @@ int tcgetattr(int fd, struct termios *termios_p) {
 	int ret=0;
 
 	ret = GetCommState(com.hComm,&SerialParams);
-printf("Got here!");
 	return 0;
 
 }

@@ -4698,7 +4698,17 @@ int gpx_convert_line(Gpx *gpx, char *gcode_line)
                 
                 // M111 - Set debug level
             case 111:
-                
+				break;
+			// M115 - Get firmware version and capabilities
+			case 115:
+                CALL( get_advanced_version_number(gpx) );
+                break;
+            //M124 Immediate motor stop
+			case 124:
+				if(gpx->flag.reprapFlavor) {
+					CALL(extended_stop(gpx,1,1));
+				}
+				break;
                 // M126 - Turn blower fan on (valve open)
             case 126: {
 				int state = (gpx->command.flag & S_IS_SET) ? (100.0f * (float)gpx->command.s / 255.0f) : 1;

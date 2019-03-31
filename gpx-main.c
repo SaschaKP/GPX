@@ -41,7 +41,11 @@
 #endif
 
 #if defined(SERIAL_SUPPORT)
+#if !defined(_WIN32) && !defined(_WIN64)
 #include <termios.h>
+#else
+#include "termiWin.h"
+#endif
 #else
 typedef long speed_t;
 #define B115200 115200
@@ -275,12 +279,12 @@ static void sio_open(char *filename, speed_t baud_rate)
         perror("Error opening port");
         exit(-1);
     }
-    
+#if !defined(_WIN32) && !defined(_WIN64)
     if(fcntl(sio_port, F_SETFL, O_RDWR) < 0) {
         perror("Setting port descriptor flags");
         exit(-1);
     }
-    
+#endif
     if(tcgetattr(sio_port, &tp) < 0) {
         perror("Error getting port attributes");
         exit(-1);

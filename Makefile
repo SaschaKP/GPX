@@ -1,7 +1,7 @@
 # Declaration of variables
 # if you want to do statically linked binary, use -> make SHARED=0 CC='gcc -static'
 CC = gcc
-CC_FLAGS = -w -std=c99
+CC_FLAGS = -w -std=c99 -DSERIAL_SUPPORT
 L_FLAGS = -lm
 
 # File names
