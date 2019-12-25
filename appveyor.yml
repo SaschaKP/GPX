@@ -16,6 +16,8 @@ build_script:
 - cmd: >-
     cd "c:\projects\GPX"
     
+    dir
+    
     
     make "all"
 
