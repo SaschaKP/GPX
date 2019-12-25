@@ -17,7 +17,7 @@ build_script:
     cd "c:\projects\GPX"
     
     
-    make
+    make "all"
 
 
 artifacts:
