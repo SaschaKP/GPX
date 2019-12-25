@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/uoitalia/GPX.svg?branch=master)](https://travis-ci.org/uoitalia/GPX)
+[![Build Status](https://travis-ci.org/SaschaKP/GPX.svg?branch=master)](https://travis-ci.org/SaschaKP/GPX)
 
 GPX was created by Dr. Henry Thomas (aka Wingcommander) in April 2013
 
