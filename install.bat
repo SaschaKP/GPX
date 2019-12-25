@@ -29,8 +29,5 @@ IF %COMPILER%==msys2 (
 
   REM There is not a corresponding cc for the mingw64 gcc. So we copy it in place.
   bash -lc "cp -pv /mingw64/bin/gcc /mingw64/bin/cc"
-  
-  bash -lc "ls"
-
-  bash -lc "make all"
+  @echo off
 )
