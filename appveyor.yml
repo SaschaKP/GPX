@@ -3,14 +3,21 @@ environment:
   matrix:
   - COMPILER: msys2
     PLATFORM: x64
-    MSYS2_ARCH: X86_64
+    MSYS2_ARCH: x86_64
     MSYS2_DIR: msys64
     MSYSTEM: MINGW64
     BIT: 64
 install:
-- cmd: >-
-    'C:\projects\gpx\install.bat'
+  # running under CI
+  - '%APPVEYOR_BUILD_FOLDER%\install.bat'
+  - 'echo End install at: & time /t'
 
-    'echo End install at: & time /t'
 build_script:
-- cmd: make
+- cmd: >-
+cd "c:\projects\GPX"
+make
+
+artifacts:
+- path: gpx.exe
+  name: GPX
+  
